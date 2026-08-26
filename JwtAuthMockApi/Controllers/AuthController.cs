@@ -3,13 +3,16 @@ using JwtAuthMockApi.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 namespace JwtAuthMockApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController(IConfiguration configuration) : ControllerBase
     {
         private static User _user = new User();
 
@@ -29,11 +32,11 @@ namespace JwtAuthMockApi.Controllers
 
 
         [HttpPost("login")]
-        public IActionResult Login(UserDto request)
+        public ActionResult<string> Login(UserDto request)
         {
             if (_user.Username != request.Username)
             {
-                return Unauthorized();
+                return BadRequest("Incorrect Credentials");
             }
 
             var hasher = new PasswordHasher<User>();
@@ -44,9 +47,33 @@ namespace JwtAuthMockApi.Controllers
                 return Unauthorized("Incorrect credentials");
             }
 
-            return Ok(_user);
+            var token = CreateToken(_user);
+
+            return Ok(token);
         }
 
-        
+
+        private string CreateToken(User user)
+        {
+            List<Claim> claims = new List<Claim>()
+            {
+                new Claim(ClaimTypes.Name, user.Username)
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"]!));
+
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
+
+            var tokenDescriptor = new JwtSecurityToken(
+                issuer: configuration["AppSettings:Issuer"],
+                audience: configuration["AppSettings:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(1),
+                signingCredentials: credentials
+                );
+
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        }
+
     }
 }
