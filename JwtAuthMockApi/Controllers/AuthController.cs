@@ -1,5 +1,6 @@
 ﻿using JwtAuthMockApi.Entities;
 using JwtAuthMockApi.Models;
+using JwtAuthMockApi.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,22 +13,22 @@ namespace JwtAuthMockApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(IConfiguration configuration) : ControllerBase
+    public class AuthController(IConfiguration configuration, IAuthService authService) : ControllerBase
     {
         private static User _user = new User();
 
 
         [HttpPost("register")]
-        public ActionResult<User> Register(UserDto request)
+        public async Task<ActionResult<User>> RegisterAsync(UserDto request)
         {
-            string hashedPassword = new PasswordHasher<User>()
-                .HashPassword(_user, request.Password);
+            var user = await authService.RegisterAsync(request);
 
-            _user.Username = request.Username;
-            _user.PasswordHash = hashedPassword;
+            if (user == null)
+            {
+                return BadRequest("Username already exists");
+            }
 
-            return Ok(_user);
-
+            return Ok(user);
         }
 
 
