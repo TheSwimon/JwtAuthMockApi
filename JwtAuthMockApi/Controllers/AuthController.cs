@@ -33,48 +33,18 @@ namespace JwtAuthMockApi.Controllers
 
 
         [HttpPost("login")]
-        public ActionResult<string> Login(UserDto request)
+        public async Task<ActionResult<string>> LoginAsync(UserDto request)
         {
-            if (_user.Username != request.Username)
+            var token = await authService.LoginAsync(request);
+
+            if (token == null)
             {
-                return BadRequest("Incorrect Credentials");
+                return BadRequest("Invalid credentials");
             }
-
-            var hasher = new PasswordHasher<User>();
-            var result = hasher.VerifyHashedPassword(_user, _user.PasswordHash, request.Password);
-
-            if (result == PasswordVerificationResult.Failed)
-            {
-                return Unauthorized("Incorrect credentials");
-            }
-
-            var token = CreateToken(_user);
 
             return Ok(token);
         }
 
-
-        private string CreateToken(User user)
-        {
-            List<Claim> claims = new List<Claim>()
-            {
-                new Claim(ClaimTypes.Name, user.Username)
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"]!));
-
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
-
-            var tokenDescriptor = new JwtSecurityToken(
-                issuer: configuration["AppSettings:Issuer"],
-                audience: configuration["AppSettings:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(1),
-                signingCredentials: credentials
-                );
-
-            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
-        }
 
     }
 }
