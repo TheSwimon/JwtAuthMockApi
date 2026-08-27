@@ -1,6 +1,7 @@
 ﻿using JwtAuthMockApi.Entities;
 using JwtAuthMockApi.Models;
 using JwtAuthMockApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -45,6 +46,11 @@ namespace JwtAuthMockApi.Controllers
             return Ok(token);
         }
 
-
+        [Authorize]
+        [HttpGet]
+        public ActionResult AuthenticatedUsersOnlyEndpoint()
+        {
+            return Ok("You are authenticated");
+        }
     }
 }

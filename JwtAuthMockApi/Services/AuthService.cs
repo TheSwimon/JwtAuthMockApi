@@ -1,4 +1,5 @@
-﻿using JwtAuthMockApi.Data;
+﻿using Azure.Core;
+using JwtAuthMockApi.Data;
 using JwtAuthMockApi.Entities;
 using JwtAuthMockApi.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -31,24 +32,8 @@ namespace JwtAuthMockApi.Services
                 return null;
             }
 
-            List<Claim> claims = new List<Claim>()
-            {
-                new Claim(ClaimTypes.Name, request.Username)
-            };
+            return CreateToken(user);
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"]!));
-
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
-
-            var tokenDescriptor = new JwtSecurityToken(
-                issuer: configuration["AppSettings:Issuer"],
-                audience: configuration["AppSettings:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(1),
-                signingCredentials: credentials
-                );
-
-            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
 
         public async Task<User?> RegisterAsync(UserDto request)
@@ -69,6 +54,30 @@ namespace JwtAuthMockApi.Services
             await context.SaveChangesAsync();
 
             return newUser;
+        }
+
+
+        private string CreateToken(User user)
+        {
+            List<Claim> claims = new List<Claim>()
+            {
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"]!));
+
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
+
+            var tokenDescriptor = new JwtSecurityToken(
+                issuer: configuration["AppSettings:Issuer"],
+                audience: configuration["AppSettings:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(1),
+                signingCredentials: credentials
+                );
+
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
     }
 }
