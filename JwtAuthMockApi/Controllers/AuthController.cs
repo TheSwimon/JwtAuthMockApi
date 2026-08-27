@@ -16,8 +16,6 @@ namespace JwtAuthMockApi.Controllers
     [ApiController]
     public class AuthController(IConfiguration configuration, IAuthService authService) : ControllerBase
     {
-        private static User _user = new User();
-
 
         [HttpPost("register")]
         public async Task<ActionResult<User>> RegisterAsync(UserDto request)
@@ -33,24 +31,52 @@ namespace JwtAuthMockApi.Controllers
         }
 
 
+
         [HttpPost("login")]
         public async Task<ActionResult<string>> LoginAsync(UserDto request)
         {
-            var token = await authService.LoginAsync(request);
+            var result = await authService.LoginAsync(request);
 
-            if (token == null)
+            if (result == null)
             {
                 return BadRequest("Invalid credentials");
             }
 
-            return Ok(token);
+            return Ok(result);
         }
+
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request)
+        {
+            var response = await authService.RefreshTokensAsync(request);
+
+            if (response is null || response.AccessToken is null || response.RefreshToken is null)
+            {
+                return Unauthorized("Invalid refresh token");
+            }
+
+            return Ok(response);
+        }
+
+
 
         [Authorize]
         [HttpGet]
-        public ActionResult AuthenticatedUsersOnlyEndpoint()
+        [Route("pleb-playground")]
+        public ActionResult PlaygroundForPlebs()
         {
-            return Ok("You are authenticated");
+            return Ok("You are free to roll in dirt you dirty maggot");
         }
+
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        [Route("royal-chamber")]
+        public ActionResult RoyalOnlyChamber()
+        {
+            return Ok("Welcome to the royal chamber, your honor");
+        }
+
     }
 }
